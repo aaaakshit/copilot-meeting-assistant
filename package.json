@@ -1,0 +1,90 @@
+{
+  "name": "copilot-meeting-assistant",
+  "private": true,
+  "version": "0.1.0",
+  "description": "Local-first real-time meeting and interview assistance powered by GitHub Copilot.",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/aaaakshit/copilot-meeting-assistant.git"
+  },
+  "main": "dist-electron/electron/main.js",
+  "type": "module",
+  "engines": {
+    "node": "^20.19.0 || >=22.12.0"
+  },
+  "scripts": {
+    "audit:source": "node scripts/audit-source.mjs",
+    "dev": "concurrently -k -n server,web -c green,cyan \"npm:dev:server\" \"npm:dev:client\"",
+    "dev:client": "vite",
+    "dev:server": "tsx watch server/index.ts",
+    "build": "tsc -b && vite build",
+    "start": "node dist-server/server/index.js",
+    "desktop:compile": "tsc -p tsconfig.electron.json",
+    "desktop:dev": "npm run desktop:compile && concurrently -k -n web,desktop -c cyan,magenta \"vite\" \"wait-on http://localhost:5173 && cross-env ELECTRON_RENDERER_URL=http://localhost:5173 electron .\"",
+    "desktop:start": "npm run build && npm run desktop:compile && electron .",
+    "desktop:package": "npm run build && npm run desktop:compile && electron-builder --win portable",
+    "test": "vitest run",
+    "test:desktop": "npm run build && npm run desktop:compile && node scripts/electron-smoke.mjs",
+    "test:watch": "vitest",
+    "typecheck": "tsc -b",
+    "lint": "oxlint .",
+    "check": "npm run audit:source && npm run lint && npm run test && npm run test:desktop",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "@github/copilot-sdk": "^1.0.7",
+    "@huggingface/transformers": "^3.8.1",
+    "express": "^5.2.1",
+    "lucide-react": "^1.25.0",
+    "react": "^19.2.7",
+    "react-dom": "^19.2.7",
+    "react-markdown": "^10.1.0",
+    "zod": "^4.4.3"
+  },
+  "devDependencies": {
+    "@types/express": "^5.0.6",
+    "@types/node": "^24.13.2",
+    "@types/react": "^19.2.17",
+    "@types/react-dom": "^19.2.3",
+    "@types/supertest": "^7.2.1",
+    "@vitejs/plugin-react": "^6.0.3",
+    "concurrently": "9.2.4",
+    "cross-env": "^10.1.0",
+    "electron": "^43.1.1",
+    "electron-builder": "^26.15.3",
+    "oxlint": "^1.71.0",
+    "supertest": "^7.2.2",
+    "tsx": "^4.23.1",
+    "typescript": "~6.0.2",
+    "vite": "^8.1.1",
+    "vitest": "^4.1.10",
+    "wait-on": "^9.0.10"
+  },
+  "build": {
+    "appId": "app.copilotmeetingassistant.desktop",
+    "productName": "Copilot Meeting Assistant",
+    "directories": {
+      "output": "release"
+    },
+    "files": [
+      "dist/**/*",
+      "dist-electron/**/*",
+      "node_modules/**/*",
+      "package.json"
+    ],
+    "asarUnpack": [
+      "node_modules/@github/copilot/**/*",
+      "node_modules/@github/copilot-*/**/*",
+      "node_modules/koffi/**/*",
+      "node_modules/onnxruntime-node/**/*",
+      "node_modules/sharp/**/*"
+    ],
+    "win": {
+      "target": "portable",
+      "artifactName": "Copilot-Meeting-Assistant-${version}-${arch}.${ext}"
+    }
+  },
+  "overrides": {
+    "sharp": "^0.35.3"
+  }
+}
