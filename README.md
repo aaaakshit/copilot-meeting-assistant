@@ -13,6 +13,7 @@ required, and follow the rules of the meeting or interview platform.
 ## Highlights
 
 - Always-on-top, transparent Electron overlay
+- Automatic answer-only focus mode on the right third of the active display
 - Windows system-audio capture through WASAPI loopback
 - Local Whisper transcription with rolling multi-segment question detection
 - General interview and coding interview modes
@@ -73,7 +74,11 @@ Electron user-data directory.
 2. Add resume highlights or evidence stories, or select **Load demo**.
 3. Return to **Live** and choose **Interview**.
 4. Select **Start listening** or type a question manually.
-5. Keep **Auto-answer detected questions** enabled for automatic generation.
+5. The setup dashboard collapses into a full-height answer sidebar while
+   listening continues.
+6. Keep **Auto-answer detected questions** enabled for automatic generation.
+7. Select **Stop listening** to restore the previous dashboard size and
+   position.
 
 ### Coding mode
 
@@ -90,12 +95,18 @@ Coding mode does not require candidate evidence.
 | Control | Action |
 | --- | --- |
 | **Start listening** | Capture the primary display and default system output |
+| **Stop listening** | End capture and restore the setup dashboard |
 | **Read screen** | Capture the current display and answer its visible prompt |
 | **Use latest** | Copy the latest transcript segment into the prompt editor |
 | `Ctrl+Shift+Enter` | Read the screen from any application |
 | `Ctrl+Shift+Space` | Hide or show the overlay |
 | Pin button | Toggle always-on-top behavior |
 | Blend button | Change overlay visibility |
+
+While listening, the overlay occupies the right third of the active display and
+uses the full working height. Only the answer surface and essential controls are
+shown. Drag the title bar to move it, resize it with the window edges, and use
+the answer scrollbar for long responses.
 
 Content protection is defense in depth, not a guarantee. Some capture tools may
 show a blank area or ignore operating-system protection. Sharing a specific
@@ -219,6 +230,8 @@ transcripts, or generated model caches.
 - Copilot sessions are isolated by mode, bounded, queued, and closed on exit.
 - A single-instance lock prevents duplicate Electron processes from colliding
   over Chromium caches and user-data files.
+- Capture-session invalidation prevents queued transcription from restarting
+  listening after **Stop**.
 
 Report security concerns through the private repository's **Security** tab. Do
 not include credentials, transcripts, resumes, or screenshots in reports.

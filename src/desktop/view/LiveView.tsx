@@ -107,7 +107,9 @@ export function LiveView({ model, actions }: LiveViewProps) {
             <button
               className="desktop-primary-button"
               type="button"
-              disabled={model.captureState === 'starting'}
+              disabled={
+                !model.runtimeReady || model.captureState === 'starting'
+              }
               onClick={() => void actions.startCapture()}
             >
               {model.captureState === 'starting' ? (

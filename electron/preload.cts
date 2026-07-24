@@ -30,6 +30,8 @@ const bridge: DesktopBridge = {
   minimizeWindow: () => ipcRenderer.invoke('window:minimize'),
   closeWindow: () => ipcRenderer.invoke('window:close'),
   toggleAlwaysOnTop: () => ipcRenderer.invoke('window:toggle-always-on-top'),
+  setFocusMode: (enabled: boolean) =>
+    ipcRenderer.invoke('window:set-focus-mode', enabled),
   onAnswerDelta: (listener: (payload: AnswerDeltaPayload) => void) =>
     subscribe('copilot:delta', listener),
   onModelProgress: (listener: (payload: ModelProgressPayload) => void) =>

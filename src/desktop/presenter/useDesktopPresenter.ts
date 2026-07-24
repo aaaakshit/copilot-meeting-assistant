@@ -22,6 +22,8 @@ import {
   DEMO_CONTEXT,
 } from '../../lib/defaults'
 import { usePersistedState } from '../../lib/usePersistedState'
+import { CaptureSessionGate } from '../model/CaptureSessionGate'
+import { GenerationGate } from '../model/GenerationGate'
 import {
   appendTranscript,
   cleanTranscript,
@@ -70,7 +72,9 @@ export function useDesktopPresenter(): DesktopPresenter {
     72,
   )
   const [health, setHealth] = useState<HealthResponse | null>(null)
+  const [runtimeReady, setRuntimeReady] = useState(false)
   const [alwaysOnTop, setAlwaysOnTop] = useState(true)
+  const [focusMode, setFocusMode] = useState(false)
   const [showAppearance, setShowAppearance] = useState(false)
   const [captureState, setCaptureState] = useState<CaptureState>('idle')
   const [captureError, setCaptureError] = useState('')
@@ -91,15 +95,20 @@ export function useDesktopPresenter(): DesktopPresenter {
   const generationRef = useRef<(question: string) => Promise<void>>(async () => {})
   const answerScreenRef = useRef<() => Promise<void>>(async () => {})
   const transcriptionQueueRef = useRef(Promise.resolve())
+  const captureSessionGateRef = useRef(new CaptureSessionGate())
+  const generationGateRef = useRef(new GenerationGate())
   const contextRef = useRef(context)
+  const answerRef = useRef(answer)
   const autoAnswerRef = useRef(autoAnswer)
   const healthRef = useRef(health)
   const interviewModeRef = useRef(interviewMode)
+  const smokeTestRef = useRef(false)
   const questionDetectorRef = useRef(
     new RollingQuestionDetector(interviewMode),
   )
 
   contextRef.current = context
+  answerRef.current = answer
   autoAnswerRef.current = autoAnswer
   healthRef.current = health
   interviewModeRef.current = interviewMode
@@ -113,7 +122,11 @@ export function useDesktopPresenter(): DesktopPresenter {
       ])
       setHealth(status)
       setAlwaysOnTop(runtime.alwaysOnTop)
+      setFocusMode(runtime.focusMode)
+      smokeTestRef.current = runtime.smokeTest
+      setRuntimeReady(true)
     } catch (error) {
+      setRuntimeReady(false)
       setHealth({
         status: 'unavailable',
         authenticated: false,
@@ -123,24 +136,50 @@ export function useDesktopPresenter(): DesktopPresenter {
     }
   }, [bridge])
 
+  const updateFocusMode = useCallback(
+    async (enabled: boolean) => {
+      const state = await bridge.setFocusMode(enabled)
+      setFocusMode(state.active)
+      setAlwaysOnTop(state.alwaysOnTop)
+      return state.active
+    },
+    [bridge],
+  )
+
+  const cancelActiveGeneration = useCallback(async () => {
+    generationGateRef.current.cancel()
+    const requestId = requestIdRef.current
+    requestIdRef.current = null
+    if (requestId) await bridge.abortAnswer(requestId)
+  }, [bridge])
+
   useEffect(() => {
     document.documentElement.classList.add('desktop-root')
     document.body.classList.add('desktop-body')
     void refreshStatus()
 
+    const captureSessionGate = captureSessionGateRef.current
+    const generationGate = generationGateRef.current
+    const questionDetector = questionDetectorRef.current
     const capture = new SystemCapture({
       onAudioSegment: (samples) => {
+        const captureSession = captureSessionGate.current()
+        if (!captureSessionGate.accepts(captureSession)) return
+
         transcriptionQueueRef.current = transcriptionQueueRef.current
           .then(async () => {
             setTranscribing(true)
             const transferable = new ArrayBuffer(samples.byteLength)
             new Float32Array(transferable).set(samples)
             const result = await bridge.transcribeAudio(transferable)
+            if (!captureSessionGate.accepts(captureSession)) {
+              return
+            }
             const text = cleanTranscript(result.text)
             if (!text) return
 
             setTranscript((current) => appendTranscript(current, text))
-            const detectedQuestion = questionDetectorRef.current.push(text)
+            const detectedQuestion = questionDetector.push(text)
             if (!detectedQuestion) return
 
             setQuestion(detectedQuestion)
@@ -158,7 +197,28 @@ export function useDesktopPresenter(): DesktopPresenter {
           .finally(() => setTranscribing(false))
       },
       onLevel: setAudioLevel,
-      onEnded: () => setCaptureState('idle'),
+      onEnded: () => {
+        captureSessionGate.stop()
+        questionDetector.reset()
+        void cancelActiveGeneration().catch((error: unknown) => {
+          console.error(
+            '[desktop] Failed to stop generation after capture ended.',
+            error,
+          )
+        })
+        setCaptureState('idle')
+        setAnswerState((current) =>
+          current === 'capturing' || current === 'generating'
+            ? answerRef.current
+              ? 'complete'
+              : 'idle'
+            : current,
+        )
+        setPage('live')
+        void updateFocusMode(false).catch((error: unknown) => {
+          console.error('[desktop] Failed to leave focus mode.', error)
+        })
+      },
     })
     captureRef.current = capture
 
@@ -179,11 +239,19 @@ export function useDesktopPresenter(): DesktopPresenter {
       unsubscribeProgress()
       unsubscribeShortcut()
       captureRef.current = null
+      captureSessionGate.stop()
+      generationGate.cancel()
+      questionDetector.reset()
       void capture.stop().catch((error: unknown) => {
         console.error('[desktop] Failed to stop capture during cleanup.', error)
       })
     }
-  }, [bridge, refreshStatus])
+  }, [
+    bridge,
+    cancelActiveGeneration,
+    refreshStatus,
+    updateFocusMode,
+  ])
 
   const startCapture = useCallback(async () => {
     if (captureRef.current?.active) return
@@ -191,23 +259,53 @@ export function useDesktopPresenter(): DesktopPresenter {
     setCaptureError('')
 
     try {
-      await captureRef.current?.start()
+      questionDetectorRef.current.reset()
+      captureSessionGateRef.current.start()
+      if (!smokeTestRef.current) await captureRef.current?.start()
+      await updateFocusMode(true)
       setCaptureState('listening')
     } catch (error) {
+      captureSessionGateRef.current.stop()
+      if (captureRef.current?.active) {
+        await captureRef.current.stop().catch((stopError: unknown) => {
+          console.error(
+            '[desktop] Failed to clean up capture after startup failure.',
+            stopError,
+          )
+        })
+      }
+      await updateFocusMode(false).catch((focusError: unknown) => {
+        console.error(
+          '[desktop] Failed to restore the window after startup failure.',
+          focusError,
+        )
+      })
       setCaptureState('error')
       setCaptureError(errorMessage(error, 'Screen and audio capture failed.'))
     }
-  }, [])
+  }, [updateFocusMode])
 
   const stopCapture = useCallback(async () => {
     try {
-      await captureRef.current?.stop()
+      captureSessionGateRef.current.stop()
+      questionDetectorRef.current.reset()
+      await cancelActiveGeneration()
+      if (!smokeTestRef.current) await captureRef.current?.stop()
+      await updateFocusMode(false)
       setCaptureState('idle')
+      setAnswerState(answer ? 'complete' : 'idle')
+      setPage('live')
     } catch (error) {
+      await updateFocusMode(false).catch((focusError: unknown) => {
+        console.error(
+          '[desktop] Failed to restore the window after capture stopped.',
+          focusError,
+        )
+      })
       setCaptureState('error')
       setCaptureError(errorMessage(error, 'Could not stop screen capture.'))
     }
-  }, [])
+  }, [answer, cancelActiveGeneration, updateFocusMode])
 
   const selectInterviewMode = (mode: InterviewMode) => {
     if (
@@ -242,8 +340,10 @@ export function useDesktopPresenter(): DesktopPresenter {
         return
       }
 
+      const generation = generationGateRef.current.begin()
       const previousRequest = requestIdRef.current
       if (previousRequest) await bridge.abortAnswer(previousRequest)
+      if (!generationGateRef.current.isCurrent(generation)) return
 
       setAnswer('')
       setAnswerError('')
@@ -253,8 +353,10 @@ export function useDesktopPresenter(): DesktopPresenter {
       if (includeScreen) {
         try {
           if (!captureRef.current?.active) await startCapture()
+          if (!generationGateRef.current.isCurrent(generation)) return
           if (captureRef.current?.active) {
             screen = await captureRef.current.captureScreen()
+            if (!generationGateRef.current.isCurrent(generation)) return
             setScreenFrame(screen)
           }
         } catch (error) {
@@ -264,6 +366,7 @@ export function useDesktopPresenter(): DesktopPresenter {
         }
       }
 
+      if (!generationGateRef.current.isCurrent(generation)) return
       const requestId = crypto.randomUUID()
       requestIdRef.current = requestId
       setAnswerState('generating')
@@ -313,10 +416,7 @@ export function useDesktopPresenter(): DesktopPresenter {
   answerScreenRef.current = answerFromScreen
 
   const stopAnswer = async () => {
-    const requestId = requestIdRef.current
-    if (!requestId) return
-    requestIdRef.current = null
-    await bridge.abortAnswer(requestId)
+    await cancelActiveGeneration()
     setAnswerState(answer ? 'complete' : 'idle')
   }
 
@@ -359,7 +459,9 @@ export function useDesktopPresenter(): DesktopPresenter {
       codingLanguage,
       codingLanguages: CODING_LANGUAGES,
       health,
+      runtimeReady,
       alwaysOnTop,
+      focusMode,
       showAppearance,
       glassLevel: desktopStyle.level,
       style: desktopStyle.style,

@@ -36,7 +36,9 @@ export interface DesktopViewModel {
   codingLanguage: CodingLanguage
   codingLanguages: CodingLanguageOption[]
   health: HealthResponse | null
+  runtimeReady: boolean
   alwaysOnTop: boolean
+  focusMode: boolean
   showAppearance: boolean
   glassLevel: number
   style: DesktopStyle

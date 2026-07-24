@@ -34,6 +34,7 @@
   border-bottom: 1px solid rgba(202, 210, 203, 0.78);
   border-radius: 10px 10px 0 0;
   -webkit-app-region: drag;
+  cursor: move;
 }
 
 .desktop-brand {
@@ -95,6 +96,28 @@
 .window-actions .window-close:hover {
   color: white;
   background: #c74338;
+}
+
+.window-actions .focus-stop-button {
+  width: auto;
+  min-width: 112px;
+  padding: 0 12px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  color: #9d4539;
+  background: rgba(255, 242, 239, 0.9);
+  border-left: 1px solid rgba(232, 187, 179, 0.72);
+  border-right: 1px solid rgba(232, 187, 179, 0.72);
+  font: inherit;
+  font-size: 0.63rem;
+  font-weight: 740;
+}
+
+.window-actions .focus-stop-button:hover {
+  color: #84352c;
+  background: #ffe6e1;
 }
 
 .appearance-popover {
@@ -701,6 +724,209 @@
 .desktop-markdown code {
   user-select: text;
   font-family: 'Cascadia Code', 'SFMono-Regular', Consolas, monospace;
+}
+
+.desktop-app-focus {
+  border-radius: 0;
+}
+
+.desktop-app-focus .desktop-titlebar {
+  border-radius: 0;
+}
+
+.desktop-focus-content {
+  min-height: 0;
+  padding: 10px;
+  display: flex;
+  flex: 1;
+  overflow: hidden;
+}
+
+.desktop-focus-answer-card {
+  min-width: 0;
+  min-height: 0;
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  overflow: hidden;
+  background: rgba(255, 255, 255, var(--panel-alpha, 0.82));
+  border: 1px solid rgba(207, 215, 208, 0.82);
+  border-radius: 12px;
+  box-shadow: 0 5px 18px rgba(35, 48, 40, 0.045);
+}
+
+.desktop-focus-heading {
+  min-height: 48px;
+  padding: 0 14px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex: 0 0 auto;
+  border-bottom: 1px solid var(--border);
+}
+
+.desktop-focus-heading > div:first-child,
+.desktop-focus-tools,
+.focus-generation-status {
+  display: flex;
+  align-items: center;
+}
+
+.desktop-focus-heading > div:first-child {
+  gap: 8px;
+  color: var(--accent);
+}
+
+.desktop-focus-heading h1 {
+  margin: 0;
+  color: var(--ink);
+  font-size: 0.88rem;
+  letter-spacing: -0.015em;
+}
+
+.desktop-focus-tools {
+  gap: 7px;
+  color: var(--muted-light);
+  font-size: 0.58rem;
+}
+
+.desktop-focus-tools button {
+  min-height: 27px;
+  padding: 0 8px;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  color: var(--accent);
+  background: var(--accent-soft);
+  border: 0;
+  border-radius: 7px;
+  font: inherit;
+  font-size: 0.6rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.focus-generation-status {
+  gap: 4px;
+  color: var(--accent);
+}
+
+.desktop-focus-markdown {
+  min-height: 0;
+  padding: 22px 24px 42px;
+  flex: 1;
+  overflow: auto;
+  overscroll-behavior: contain;
+  scrollbar-color: rgba(31, 111, 81, 0.55) rgba(226, 232, 226, 0.58);
+  scrollbar-width: thin;
+  user-select: text;
+  color: var(--ink-soft);
+  font-size: 0.93rem;
+  line-height: 1.72;
+}
+
+.desktop-focus-markdown::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+.desktop-focus-markdown::-webkit-scrollbar-track {
+  background: rgba(226, 232, 226, 0.58);
+  border-radius: 999px;
+}
+
+.desktop-focus-markdown::-webkit-scrollbar-thumb {
+  background: rgba(31, 111, 81, 0.55);
+  border: 2px solid transparent;
+  border-radius: 999px;
+  background-clip: padding-box;
+}
+
+.desktop-focus-markdown h2 {
+  margin: 24px 0 8px;
+  color: var(--ink);
+  font-size: 1.02rem;
+  line-height: 1.35;
+}
+
+.desktop-focus-markdown h2:first-child {
+  margin-top: 0;
+}
+
+.desktop-focus-markdown p {
+  margin: 0 0 14px;
+}
+
+.desktop-focus-markdown ul,
+.desktop-focus-markdown ol {
+  margin: 7px 0 16px;
+  padding-left: 22px;
+}
+
+.desktop-focus-markdown li {
+  margin-bottom: 7px;
+}
+
+.desktop-focus-markdown pre {
+  max-width: 100%;
+  padding: 14px;
+  overflow-x: auto;
+  color: #e9f2eb;
+  background: #17251d;
+  border-radius: 9px;
+  font-size: 0.78rem;
+  line-height: 1.6;
+}
+
+.desktop-focus-markdown code {
+  user-select: text;
+  font-family: 'Cascadia Code', 'SFMono-Regular', Consolas, monospace;
+}
+
+.desktop-focus-empty,
+.desktop-focus-error {
+  min-height: 0;
+  padding: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: 1;
+  color: var(--muted);
+  text-align: center;
+}
+
+.desktop-focus-empty {
+  flex-direction: column;
+  gap: 10px;
+}
+
+.desktop-focus-empty strong {
+  color: var(--ink-soft);
+  font-size: 0.9rem;
+}
+
+.desktop-focus-empty p {
+  max-width: 320px;
+  margin: 0;
+  font-size: 0.68rem;
+  line-height: 1.5;
+}
+
+.desktop-focus-error {
+  gap: 11px;
+  color: #8f4035;
+}
+
+.desktop-focus-error strong {
+  display: block;
+  color: #7d332a;
+}
+
+.desktop-focus-error p {
+  margin: 5px 0 0;
+  font-size: 0.7rem;
+  line-height: 1.5;
 }
 
 .desktop-error {

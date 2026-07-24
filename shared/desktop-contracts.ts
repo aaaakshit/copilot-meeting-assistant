@@ -35,6 +35,13 @@ export interface DesktopRuntimeInfo {
   platform: 'win32' | 'darwin' | 'linux' | 'other'
   appVersion: string
   alwaysOnTop: boolean
+  focusMode: boolean
+  smokeTest: boolean
+}
+
+export interface DesktopFocusModeState {
+  active: boolean
+  alwaysOnTop: boolean
 }
 
 export type DesktopShortcut = 'toggle-overlay' | 'answer-screen'
@@ -49,6 +56,7 @@ export interface DesktopBridge {
   minimizeWindow(): Promise<void>
   closeWindow(): Promise<void>
   toggleAlwaysOnTop(): Promise<boolean>
+  setFocusMode(enabled: boolean): Promise<DesktopFocusModeState>
   onAnswerDelta(listener: (payload: AnswerDeltaPayload) => void): () => void
   onModelProgress(listener: (payload: ModelProgressPayload) => void): () => void
   onShortcut(listener: (shortcut: DesktopShortcut) => void): () => void

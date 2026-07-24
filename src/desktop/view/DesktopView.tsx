@@ -1,5 +1,6 @@
 import {
   Blend,
+  CircleStop,
   Minus,
   Pin,
   PinOff,
@@ -10,12 +11,18 @@ import {
 } from 'lucide-react'
 import type { DesktopPresenter } from '../model/desktopModel'
 import { ConnectionStatus } from './components/ConnectionStatus'
+import { FocusView } from './FocusView'
 import { LiveView } from './LiveView'
 import { ProfileView } from './ProfileView'
 
 export function DesktopView({ model, actions }: DesktopPresenter) {
   return (
-    <div className="desktop-app" style={model.style}>
+    <div
+      className={`desktop-app ${model.focusMode ? 'desktop-app-focus' : ''}`}
+      style={model.style}
+      data-runtime-ready={String(model.runtimeReady)}
+      data-focus-mode={String(model.focusMode)}
+    >
       <header className="desktop-titlebar">
         <div className="desktop-brand">
           <span className="desktop-brand-mark">
@@ -25,6 +32,17 @@ export function DesktopView({ model, actions }: DesktopPresenter) {
           <span className="desktop-live-badge">LIVE</span>
         </div>
         <div className="window-actions">
+          {model.focusMode && (
+            <button
+              className="focus-stop-button"
+              type="button"
+              title="Stop listening and return to setup"
+              onClick={() => void actions.stopCapture()}
+            >
+              <CircleStop size={14} aria-hidden="true" />
+              Stop listening
+            </button>
+          )}
           <button
             className={
               model.showAppearance
@@ -102,7 +120,11 @@ export function DesktopView({ model, actions }: DesktopPresenter) {
         )}
       </header>
 
-      <nav className="desktop-tabs" aria-label="Desktop views">
+      {model.focusMode ? (
+        <FocusView model={model} actions={actions} />
+      ) : (
+        <>
+          <nav className="desktop-tabs" aria-label="Desktop views">
         <button
           className={model.page === 'live' ? 'active' : ''}
           type="button"
@@ -123,18 +145,20 @@ export function DesktopView({ model, actions }: DesktopPresenter) {
           health={model.health}
           onRetry={() => void actions.refreshStatus()}
         />
-      </nav>
+          </nav>
 
-      {model.page === 'live' ? (
-        <LiveView model={model} actions={actions} />
-      ) : (
-        <ProfileView model={model} actions={actions} />
+          {model.page === 'live' ? (
+            <LiveView model={model} actions={actions} />
+          ) : (
+            <ProfileView model={model} actions={actions} />
+          )}
+
+          <footer className="desktop-footer">
+            <span>Ctrl+Shift+Space: hide/show</span>
+            <span>Ctrl+Shift+Enter: read screen</span>
+          </footer>
+        </>
       )}
-
-      <footer className="desktop-footer">
-        <span>Ctrl+Shift+Space: hide/show</span>
-        <span>Ctrl+Shift+Enter: read screen</span>
-      </footer>
     </div>
   )
 }

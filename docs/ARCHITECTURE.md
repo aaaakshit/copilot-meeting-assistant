@@ -18,6 +18,7 @@
 - `SpeechSegmenter` performs voice activity segmentation and resampling.
 - `RollingQuestionDetector` assembles split transcripts and detects prompts.
 - `desktopModel.ts` defines view models, actions, constants, and pure helpers.
+- `CaptureSessionGate` invalidates queued transcription when capture ends.
 
 The shared request and IPC contracts live under `shared/`.
 
@@ -70,6 +71,10 @@ discarded, while successful sessions are reused for bounded follow-up context.
 ## Desktop lifecycle
 
 - A single-instance lock prevents duplicate Chromium cache/user-data access.
+- Starting capture stores the normal bounds and snaps to the right third of the
+  active display at full working height.
+- Stopping capture restores the prior bounds and pin state.
+- The frameless title bar remains draggable in both setup and focus modes.
 - Startup errors exit with a non-zero code and a local diagnostic.
 - One unexpected renderer exit is recovered by reloading the renderer.
 - A second failure is not automatically retried, preventing crash loops.
@@ -81,6 +86,7 @@ discarded, while successful sessions are reused for bounded follow-up context.
 - Pure unit tests cover prompts, validation, API streaming, audio segmentation,
   question detection, and renderer recovery policy.
 - The Electron smoke test builds production assets, launches the real entrypoint,
-  waits for rendered MVP controls, and verifies graceful shutdown.
+  enters answer-only focus mode, verifies one-third native bounds, stops,
+  verifies restored bounds and controls, and then verifies graceful shutdown.
 - CI runs on Windows because desktop behavior and native packages are
   platform-sensitive.
